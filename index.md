@@ -5,7 +5,7 @@ title: Wolf and Rabbit
 
 <div class="hero-side-images">
   <div class="image-box">
-    <img src="/mobile-robotics/images/wolf.png" alt="Wolf" class="side-image">
+    <img src="/assets/images/wolf.png" alt="Wolf" class="side-image">
   </div>
 
   <div class="hero-center">
@@ -26,7 +26,7 @@ title: Wolf and Rabbit
   </div>
 
   <div class="image-box">
-    <img src="/mobile-robotics/images/rabbit.png" alt="Rabbit" class="side-image">
+    <img src="/assets/images/rabbit.png" alt="Rabbit" class="side-image">
   </div>
 </div>
 
