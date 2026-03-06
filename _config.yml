@@ -1,6 +1,3 @@
 title: Wolf and Rabbit
 description: A ROS 2 TurtleBot pursuit project using vision and distance sensing
 theme: minima
-repository: AldrickPeter/mobile-robotics
-url: "https://aldrickpeter.github.io"
-baseurl: "/mobile-robotics"
