@@ -12,6 +12,6 @@ detected but stops at its boundary. The game ends when the wolf closes within
 **0.4 m** of the rabbit.
 
 ## Team Members
-- Aldrick peter Thomas 
+- Aldrick Peter Thomas 
 - Shao-Chi Cheng (Brian)
 - Chach Chaimongkol
