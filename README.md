@@ -1,6 +1,6 @@
-# * mobile-robotics *
+# RAS 598 - mobile-robotics: Team Palantir
 
-This repository is for the final project of the team PALANTIR for the course RAS598 Mobile Robotics. 
+This repository is for the final project of the team **Palantir** for the course RAS598 Mobile Robotics. 
 our mission is to build a two-robot predator-prey game using TurtleBot4 in a bounded indoor arena. 
 One robot acts as a **wolf** patrolling a designated territory, the other as a 
 **rabbit** searching the arena for randomly generated AR carrots. Both robots 
