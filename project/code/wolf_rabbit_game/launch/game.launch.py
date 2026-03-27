@@ -15,6 +15,16 @@ def generate_launch_description():
     referee_cfg = os.path.join(pkg_share, 'config', 'referee.yaml')
 
     return LaunchDescription([
+        
+        
+        
+        Node(
+            package='wolf_rabbit_game',
+            executable='carrot_manager',
+            name='carrot_manager',
+            output='screen',
+            parameters=[os.path.join(pkg_share, 'config', 'carrot.yaml')],
+        ),
         Node(
             package='wolf_rabbit_game',
             executable='yolo_detector',

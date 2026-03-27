@@ -21,6 +21,7 @@ setup(
     license='Apache-2.0',
     entry_points={
         'console_scripts': [
+            'carrot_manager = wolf_rabbit_game.carrot_manager:main',
             'yolo_detector = wolf_rabbit_game.yolo_detector:main',
             'geofence_node = wolf_rabbit_game.geofence_node:main',
             'rabbit_fsm = wolf_rabbit_game.rabbit_fsm:main',
