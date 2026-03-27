@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>wolf_rabbit_bringup</name>
+  <version>0.0.1</version>
+  <description>Launch and configuration for the full wolf-rabbit system.</description>
+  <maintainer email="team@example.com">Team</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>rclpy</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+  <depend>ament_index_python</depend>
+
+  <exec_depend>rabbit_behavior</exec_depend>
+  <exec_depend>wolf_behavior</exec_depend>
+  <exec_depend>yolo_perception</exec_depend>
+  <exec_depend>geofence_manager</exec_depend>
+  <exec_depend>game_referee</exec_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

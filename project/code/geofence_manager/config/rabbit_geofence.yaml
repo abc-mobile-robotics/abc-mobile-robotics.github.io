@@ -1,0 +1,14 @@
+geofence_node:
+  ros__parameters:
+    odom_topic: /rabbit/odom
+    status_topic: /rabbit/geofence
+    robot_role: rabbit
+    global_min_x: 0.0
+    global_max_x: 10.0
+    global_min_y: 0.0
+    global_max_y: 10.0
+    wolf_min_x: 2.0
+    wolf_max_x: 6.0
+    wolf_min_y: 2.0
+    wolf_max_y: 6.0
+    boundary_margin: 0.5

@@ -1,0 +1,7 @@
+bool inside_global_arena
+bool inside_wolf_territory
+bool near_global_boundary
+bool near_territory_boundary
+float32 margin_to_global_boundary
+float32 margin_to_territory_boundary
+builtin_interfaces/Time stamp
