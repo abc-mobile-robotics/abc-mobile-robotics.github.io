@@ -9,3 +9,4 @@ yolo_detector:
     wolf_label: wolf
     carrot_label: carrot
     image_width_px: 640
+    image_encoding: bgr8
