@@ -3,10 +3,16 @@ rabbit_fsm:
     vision_topic: /rabbit/vision
     geofence_topic: /rabbit/geofence
     game_state_topic: /game/state
+    odom_topic: /rabbit/odom
     cmd_vel_topic: /rabbit/cmd_vel
     search_linear_speed: 0.12
-    turn_angular_speed: 0.8
-    flee_linear_speed: 0.20
+    turn_angular_speed: 0.90
+    flee_linear_speed: 0.22
+    boundary_turn_speed: 0.80
     center_x_px: 320.0
-    carrot_approach_gain: 0.002
-    wolf_avoid_turn_duration_sec: 2.2
+    carrot_approach_gain: 0.003
+    wolf_avoid_gain: 0.004
+    vision_timeout_sec: 0.70
+    escape_turn_angle_deg: 180.0
+    escape_settle_time_sec: 0.40
+    max_angular_speed: 1.20

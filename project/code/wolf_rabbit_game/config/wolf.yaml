@@ -4,9 +4,14 @@ wolf_fsm:
     wolf_geofence_topic: /wolf/geofence
     rabbit_geofence_topic: /rabbit/geofence
     game_state_topic: /game/state
+    odom_topic: /wolf/odom
     cmd_vel_topic: /wolf/cmd_vel
     patrol_linear_speed: 0.10
-    patrol_turn_speed: 0.60
-    chase_linear_speed: 0.18
-    chase_turn_gain: 0.002
+    patrol_turn_speed: 0.65
+    chase_linear_speed: 0.20
+    chase_turn_gain: 0.003
+    return_turn_speed: 0.75
+    vision_timeout_sec: 0.70
     center_x_px: 320.0
+    max_angular_speed: 1.20
+    return_turn_angle_deg: 160.0

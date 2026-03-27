@@ -1,8 +1,8 @@
 from typing import List
 
 import rclpy
-from rclpy.node import Node
 from nav_msgs.msg import Odometry
+from rclpy.node import Node
 
 from .utils import dict_to_string_msg
 
@@ -24,9 +24,9 @@ class GeofenceNode(Node):
         self.declare_parameter('territory_max_y', 1.5)
         self.declare_parameter('boundary_margin', 0.3)
 
-        self.robot_name = self.get_parameter('robot_name').value
-        self.odom_topic = self.get_parameter('odom_topic').value
-        self.geofence_topic = self.get_parameter('geofence_topic').value
+        self.robot_name = str(self.get_parameter('robot_name').value)
+        self.odom_topic = str(self.get_parameter('odom_topic').value)
+        self.geofence_topic = str(self.get_parameter('geofence_topic').value)
         self.boundary_margin = float(self.get_parameter('boundary_margin').value)
 
         self.arena = {
@@ -45,26 +45,40 @@ class GeofenceNode(Node):
         self.pub = self.create_publisher(type(dict_to_string_msg({})), self.geofence_topic, 10)
         self.sub = self.create_subscription(Odometry, self.odom_topic, self.odom_callback, 10)
 
-    def inside_box(self, x: float, y: float, box: dict) -> bool:
+    @staticmethod
+    def inside_box(x: float, y: float, box: dict) -> bool:
         return box['min_x'] <= x <= box['max_x'] and box['min_y'] <= y <= box['max_y']
 
-    def boundary_distance(self, x: float, y: float, box: dict) -> float:
+    @staticmethod
+    def signed_margin(x: float, y: float, box: dict) -> float:
         distances = [
             x - box['min_x'],
             box['max_x'] - x,
             y - box['min_y'],
             box['max_y'] - y,
         ]
-        return min(distances)
+        if GeofenceNode.inside_box(x, y, box):
+            return min(distances)
+        dx = 0.0
+        dy = 0.0
+        if x < box['min_x']:
+            dx = x - box['min_x']
+        elif x > box['max_x']:
+            dx = box['max_x'] - x
+        if y < box['min_y']:
+            dy = y - box['min_y']
+        elif y > box['max_y']:
+            dy = box['max_y'] - y
+        return max(dx, dy)
 
     def odom_callback(self, msg: Odometry) -> None:
-        x = msg.pose.pose.position.x
-        y = msg.pose.pose.position.y
+        x = float(msg.pose.pose.position.x)
+        y = float(msg.pose.pose.position.y)
 
         in_arena = self.inside_box(x, y, self.arena)
         in_territory = self.inside_box(x, y, self.territory)
-        arena_margin = self.boundary_distance(x, y, self.arena) if in_arena else -1.0
-        territory_margin = self.boundary_distance(x, y, self.territory) if in_territory else -1.0
+        arena_margin = self.signed_margin(x, y, self.arena)
+        territory_margin = self.signed_margin(x, y, self.territory)
 
         payload = {
             'robot_name': self.robot_name,
@@ -72,6 +86,8 @@ class GeofenceNode(Node):
             'y': y,
             'inside_global_arena': in_arena,
             'inside_wolf_territory': in_territory,
+            'outside_global_arena': not in_arena,
+            'outside_wolf_territory': not in_territory,
             'near_global_boundary': in_arena and arena_margin < self.boundary_margin,
             'near_territory_boundary': in_territory and territory_margin < self.boundary_margin,
             'arena_margin': arena_margin,
