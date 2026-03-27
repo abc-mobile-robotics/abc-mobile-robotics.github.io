@@ -1,0 +1,12 @@
+rabbit_fsm:
+  ros__parameters:
+    vision_topic: /rabbit/vision
+    geofence_topic: /rabbit/geofence
+    game_state_topic: /game/state
+    cmd_vel_topic: /rabbit/cmd_vel
+    search_linear_speed: 0.12
+    turn_angular_speed: 0.8
+    flee_linear_speed: 0.20
+    center_x_px: 320.0
+    carrot_approach_gain: 0.002
+    wolf_avoid_turn_duration_sec: 2.2

@@ -1,9 +1,0 @@
-string label
-float32 confidence
-float32 center_x
-float32 center_y
-float32 bbox_width
-float32 bbox_height
-float32 estimated_distance
-bool visible
-builtin_interfaces/Time stamp

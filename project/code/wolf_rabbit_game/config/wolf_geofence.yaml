@@ -1,0 +1,16 @@
+wolf_geofence:
+  ros__parameters:
+    robot_name: wolf
+    odom_topic: /wolf/odom
+    geofence_topic: /wolf/geofence
+    # Global arena rectangle
+    arena_min_x: -3.0
+    arena_max_x:  3.0
+    arena_min_y: -3.0
+    arena_max_y:  3.0
+    # Wolf territory rectangle
+    territory_min_x: -1.5
+    territory_max_x:  1.5
+    territory_min_y: -1.5
+    territory_max_y:  1.5
+    boundary_margin: 0.30

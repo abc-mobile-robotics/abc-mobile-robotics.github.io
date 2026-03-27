@@ -1,7 +1,0 @@
-game_referee_node:
-  ros__parameters:
-    wolf_odom_topic: /wolf/odom
-    rabbit_odom_topic: /rabbit/odom
-    rabbit_geofence_topic: /rabbit/geofence
-    game_state_topic: /game/state
-    capture_distance: 0.4

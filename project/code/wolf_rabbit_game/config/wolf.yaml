@@ -1,0 +1,12 @@
+wolf_fsm:
+  ros__parameters:
+    vision_topic: /wolf/vision
+    wolf_geofence_topic: /wolf/geofence
+    rabbit_geofence_topic: /rabbit/geofence
+    game_state_topic: /game/state
+    cmd_vel_topic: /wolf/cmd_vel
+    patrol_linear_speed: 0.10
+    patrol_turn_speed: 0.60
+    chase_linear_speed: 0.18
+    chase_turn_gain: 0.002
+    center_x_px: 320.0
