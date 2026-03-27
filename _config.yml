@@ -3,3 +3,6 @@ description: A ROS 2 TurtleBot pursuit project using vision and distance sensing
 theme: minima
 url: "https://abc-mobile-robotics.github.io"
 baseurl: ""
+markdown: kramdown
+kramdown:
+  math_engine: mathjax
