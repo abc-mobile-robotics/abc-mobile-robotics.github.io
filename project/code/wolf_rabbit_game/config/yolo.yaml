@@ -1,0 +1,12 @@
+yolo_detector:
+  ros__parameters:
+    image_topic: /camera/image_raw
+    rabbit_pub_topic: /rabbit/vision
+    wolf_pub_topic: /wolf/vision
+    model_path: best.pt
+    confidence_threshold: 0.50
+    rabbit_label: rabbit
+    wolf_label: wolf
+    carrot_label: carrot
+    image_width_px: 640
+    image_encoding: bgr8
