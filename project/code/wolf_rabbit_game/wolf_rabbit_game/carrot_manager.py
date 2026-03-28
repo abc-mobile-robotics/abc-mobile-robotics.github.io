@@ -2,7 +2,8 @@ import json
 import math
 import random
 from typing import Optional, Tuple
-
+from visualization_msgs.msg import Marker
+from geometry_msgs.msg import Point
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
@@ -25,7 +26,7 @@ class CarrotManager(Node):
         self.declare_parameter('rabbit_odom_topic', '/rabbit/odom')
         self.declare_parameter('carrot_state_topic', '/game/carrot_state')
         self.declare_parameter('game_state_topic', '/game/state')
-
+        
         self.declare_parameter('timer_period', 0.1)
         self.declare_parameter('eat_distance', 0.25)
         self.declare_parameter('respawn_delay', 2.0)
@@ -49,7 +50,7 @@ class CarrotManager(Node):
         self.rabbit_odom_topic = self.get_parameter('rabbit_odom_topic').value
         self.carrot_state_topic = self.get_parameter('carrot_state_topic').value
         self.game_state_topic = self.get_parameter('game_state_topic').value
-
+        self.marker_pub = self.create_publisher(Marker, '/game/carrot_marker', 10)
         self.timer_period = float(self.get_parameter('timer_period').value)
         self.eat_distance = float(self.get_parameter('eat_distance').value)
         self.respawn_delay = float(self.get_parameter('respawn_delay').value)
@@ -166,7 +167,41 @@ class CarrotManager(Node):
                 )
 
         self.publish_carrot_state()
+        self.publish_carrot_marker()
+    def publish_carrot_marker(self) -> None:
+        marker = Marker()
+        marker.header.frame_id = 'map'
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.ns = 'carrot'
+        marker.id = 0
 
+        if not self.carrot_active:
+            marker.action = Marker.DELETE
+            self.marker_pub.publish(marker)
+            return
+
+        marker.action = Marker.ADD
+        marker.type = Marker.SPHERE
+
+        marker.pose.position.x = float(self.carrot_x)
+        marker.pose.position.y = float(self.carrot_y)
+        marker.pose.position.z = 0.15
+
+        marker.pose.orientation.x = 0.0
+        marker.pose.orientation.y = 0.0
+        marker.pose.orientation.z = 0.0
+        marker.pose.orientation.w = 1.0
+
+        marker.scale.x = 0.20
+        marker.scale.y = 0.20
+        marker.scale.z = 0.20
+
+        marker.color.a = 1.0
+        marker.color.r = 1.0
+        marker.color.g = 0.45
+        marker.color.b = 0.0
+
+        self.marker_pub.publish(marker)        
     # ---------------------------------------------------
     # Core logic
     # ---------------------------------------------------
