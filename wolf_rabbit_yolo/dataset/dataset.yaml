@@ -1,0 +1,8 @@
+path: C:/Users/brian/Desktop/school/mobile-robotics/wolf_rabbit_yolo/dataset
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: wolf_sign
+  1: rabbit_sign
