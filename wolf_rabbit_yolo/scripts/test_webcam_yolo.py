@@ -1,9 +1,11 @@
-from pathlib import Path
 import cv2
 from ultralytics import YOLO
 
+# Only show detections above this confidence
+CONF_THRESHOLD = 0.90
+
 # 改成你的 best.pt 路徑
-MODEL_PATH = r"C:\Users\brian\Desktop\school\mobile-robotics\wolf_rabbit_yolo\runs\wolf_rabbit_signs_v2\weights\best.pt"
+MODEL_PATH = r"D:\abc-mobile-robotics.github.io\wolf_rabbit_yolo\runs\wolf_rabbit_signs_v2\weights\best.pt"
 
 def open_camera():
     # 先試最常見的主相機 index=0
@@ -47,8 +49,8 @@ def main():
             print("Failed to read frame from camera.")
             break
 
-        # YOLO 即時推論
-        results = model(frame, conf=0.25, verbose=False)
+        # YOLO 即時推論（只顯示 conf >= 0.90 的偵測）
+        results = model(frame, conf=CONF_THRESHOLD, verbose=False)
 
         # 把框與標籤畫回影像
         annotated = results[0].plot()

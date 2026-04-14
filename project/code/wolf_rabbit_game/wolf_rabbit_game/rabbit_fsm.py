@@ -17,8 +17,8 @@ class RabbitFSM(Node):
         self.declare_parameter('carrot_state_topic', '/game/carrot_state')
         self.declare_parameter('geofence_topic', '/rabbit/geofence')
         self.declare_parameter('game_state_topic', '/game/state')
-        self.declare_parameter('odom_topic', '/rabbit/odom')
-        self.declare_parameter('cmd_vel_topic', '/rabbit/cmd_vel')
+        self.declare_parameter('odom_topic', '/odom')
+        self.declare_parameter('cmd_vel_topic', '/cmd_vel')
 
         self.declare_parameter('search_linear_speed', 0.12)
         self.declare_parameter('search_spin_speed', 0.25)

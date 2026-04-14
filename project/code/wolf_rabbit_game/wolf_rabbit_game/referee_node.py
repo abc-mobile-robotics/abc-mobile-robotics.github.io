@@ -13,7 +13,7 @@ class RefereeNode(Node):
     def __init__(self) -> None:
         super().__init__('referee_node')
 
-        self.declare_parameter('rabbit_odom_topic', '/rabbit/odom')
+        self.declare_parameter('rabbit_odom_topic', '/odom')
         self.declare_parameter('wolf_odom_topic', '/wolf/odom')
         self.declare_parameter('rabbit_geofence_topic', '/rabbit/geofence')
         self.declare_parameter('wolf_vision_topic', '/wolf/vision')

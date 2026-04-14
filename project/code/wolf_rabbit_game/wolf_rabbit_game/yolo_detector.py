@@ -22,7 +22,7 @@ class YoloDetector(Node):
     def __init__(self) -> None:
         super().__init__('yolo_detector')
 
-        self.declare_parameter('image_topic', '/camera/image_raw')
+        self.declare_parameter('image_topic', '/oakd/rgb/preview/image_raw')
         self.declare_parameter('rabbit_pub_topic', '/rabbit/vision')
         self.declare_parameter('wolf_pub_topic', '/wolf/vision')
         self.declare_parameter('model_path', 'best.pt')
