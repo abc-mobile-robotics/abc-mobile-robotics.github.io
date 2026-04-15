@@ -1,3 +1,6 @@
+---
+nav_exclude: true
+---
 # turtlebot4_geofence
 
 A ROS2 geofencing engine for TurtleBot4.  
