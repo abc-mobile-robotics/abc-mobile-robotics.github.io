@@ -19,6 +19,20 @@ detected but stops at its boundary. The game ends when the wolf closes within
 - `referee_node`: determines capture and escape game states.
 
 ## Build
+
+Before running the program, store [`setup.sh`](https://github.com/abc-mobile-robotics/abc-mobile-robotics.github.io/blob/main/project/code/startup.sh) in your home directory.
+
+Run this **once** to make the script executable:
+```bash
+chmod +x setup.sh
+```
+
+Then run this **in every new terminal**:
+```bash
+source setup.sh
+```
+
+
 ```bash
 cd ~/colcon_ws/src
 cp -r wolf_rabbit_game ./
