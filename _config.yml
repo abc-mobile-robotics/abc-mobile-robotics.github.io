@@ -5,3 +5,7 @@ url: "https://abc-mobile-robotics.github.io"
 baseurl: ""
 markdown: kramdown
 math: mathjax
+header_pages:
+  - index.md
+  - m1.md
+  - m2.md
