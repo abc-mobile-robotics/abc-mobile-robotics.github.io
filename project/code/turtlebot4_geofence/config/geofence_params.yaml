@@ -1,0 +1,43 @@
+/**:
+  ros__parameters:
+
+    # ── Geofence boundary ────────────────────────────────────────────────────
+    #
+    # Define your allowed zone as a flat list of X Y pairs in the MAP frame.
+    # You can read the coordinates directly from RViz:
+    #   1. Launch nav2 + localization so the map is visible.
+    #   2. Use the "Publish Point" tool (toolbar) and click the corners of your zone.
+    #   3. Watch the /clicked_point topic: ros2 topic echo /clicked_point
+    #   4. Copy the x/y values here in order (clockwise or counter-clockwise).
+    #
+    # Minimum 3 vertices. Any convex or concave polygon is supported.
+    #
+    # Example below: a 4 × 4 m square centred at the map origin.
+    zone_polygon:
+      - 0.689    # vertex 0 x
+      - 2.39     # vertex 0 y
+      - -3.58    # vertex 1 x
+      - 1.51     # vertex 1 y
+      - -3.32    # vertex 2 x
+      - 0.159    # vertex 2 y
+      - 0.202    # vertex 3 x
+      - 0.899    # vertex 3 y
+
+    # ── Tuning parameters ────────────────────────────────────────────────────
+
+    # How far from the boundary (metres) the WARNING zone begins.
+    # Robot starts slowing and steering inward at this distance.
+    warning_distance: 0.5
+
+    # Maximum forward speed the geofence may command (m/s).
+    max_linear_speed: 0.3
+
+    # Maximum rotational speed the geofence may command (rad/s).
+    max_angular_speed: 0.8
+
+    # Proportional gain on the corrective velocity.
+    # Higher = more aggressive push-back. Start at 1.0 and tune up.
+    correction_gain: 1.2
+
+    # How often (Hz) the control loop runs.
+    publish_rate: 10.0
