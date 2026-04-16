@@ -44,12 +44,26 @@ class YoloDetector(Node):
         self.image_width_px = float(self.get_parameter('image_width_px').value)
         self.image_encoding = str(self.get_parameter('image_encoding').value)
 
-        self.rabbit_pub = self.create_publisher(type(dict_to_string_msg({})), self.rabbit_pub_topic, 10)
-        self.wolf_pub = self.create_publisher(type(dict_to_string_msg({})), self.wolf_pub_topic, 10)
-        self.sub = self.create_subscription(Image, self.image_topic, self.image_callback, 10)
+        self.rabbit_pub = self.create_publisher(
+            type(dict_to_string_msg({})),
+            self.rabbit_pub_topic,
+            10
+        )
+        self.wolf_pub = self.create_publisher(
+            type(dict_to_string_msg({})),
+            self.wolf_pub_topic,
+            10
+        )
+        self.sub = self.create_subscription(
+            Image,
+            self.image_topic,
+            self.image_callback,
+            10
+        )
 
         self.bridge = CvBridge() if CvBridge is not None else None
         self.model = None
+
         if YOLO is not None:
             try:
                 self.model = YOLO(self.model_path)
@@ -57,10 +71,18 @@ class YoloDetector(Node):
             except Exception as exc:
                 self.get_logger().warning(f'Failed to load YOLO model: {exc}')
         else:
-            self.get_logger().warning('ultralytics is not installed. This node will publish empty detections.')
+            self.get_logger().warning(
+                'ultralytics is not installed. This node will publish empty detections.'
+            )
 
         if self.bridge is None:
-            self.get_logger().warning('cv_bridge is not installed. Replace node dependencies before enabling image inference.')
+            self.get_logger().warning(
+                'cv_bridge is not installed. Replace node dependencies before enabling image inference.'
+            )
+
+        self.get_logger().info(f'Subscribed image topic: {self.image_topic}')
+        self.get_logger().info(f'Rabbit vision topic: {self.rabbit_pub_topic}')
+        self.get_logger().info(f'Wolf vision topic: {self.wolf_pub_topic}')
 
     def image_callback(self, msg: Image) -> None:
         stamp = time.time()
@@ -74,8 +96,25 @@ class YoloDetector(Node):
 
         try:
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding=self.image_encoding)
+
+            # 用實際影像寬度覆蓋參數，避免 center_x 算錯
+            if hasattr(frame, 'shape') and len(frame.shape) >= 2:
+                rabbit_payload['rabbit_center_x'] = frame.shape[1] / 2.0
+                wolf_payload['rabbit_center_x'] = frame.shape[1] / 2.0
+                rabbit_payload['wolf_center_x'] = frame.shape[1] / 2.0
+                wolf_payload['wolf_center_x'] = frame.shape[1] / 2.0
+                rabbit_payload['carrot_center_x'] = frame.shape[1] / 2.0
+                wolf_payload['carrot_center_x'] = frame.shape[1] / 2.0
+
             detections = self.run_inference(frame)
             self.fill_payloads_from_detections(detections, rabbit_payload, wolf_payload)
+
+            self.get_logger().info(
+                f"rabbit_visible={rabbit_payload['rabbit_visible']}, "
+                f"rabbit_conf={rabbit_payload['rabbit_confidence']:.3f}, "
+                f"rabbit_center_x={rabbit_payload['rabbit_center_x']:.1f}"
+            )
+
         except Exception as exc:
             self.get_logger().warning(f'YOLO inference failed: {exc}')
 
@@ -98,14 +137,17 @@ class YoloDetector(Node):
             conf = float(box.conf[0].item())
             if conf < self.confidence_threshold:
                 continue
+
             cls_id = int(box.cls[0].item())
             label = names.get(cls_id, str(cls_id))
             xyxy = box.xyxy[0].tolist()
             center_x = 0.5 * (float(xyxy[0]) + float(xyxy[2]))
             width = float(xyxy[2]) - float(xyxy[0])
+
             current = best.get(label)
             if current is None or conf > current[0]:
                 best[label] = (conf, center_x, width)
+
         return best
 
     def fill_payloads_from_detections(
@@ -114,14 +156,55 @@ class YoloDetector(Node):
         rabbit_payload: dict,
         wolf_payload: dict,
     ) -> None:
-        self._apply_detection(detections, self.wolf_label, rabbit_payload, visible_key='wolf_visible', conf_key='wolf_confidence', center_key='wolf_center_x', width_key='wolf_bbox_width')
-        self._apply_detection(detections, self.carrot_label, rabbit_payload, visible_key='carrot_visible', conf_key='carrot_confidence', center_key='carrot_center_x', width_key='carrot_bbox_width')
+        self._apply_detection(
+            detections, self.wolf_label, rabbit_payload,
+            visible_key='wolf_visible',
+            conf_key='wolf_confidence',
+            center_key='wolf_center_x',
+            width_key='wolf_bbox_width'
+        )
+        self._apply_detection(
+            detections, self.carrot_label, rabbit_payload,
+            visible_key='carrot_visible',
+            conf_key='carrot_confidence',
+            center_key='carrot_center_x',
+            width_key='carrot_bbox_width'
+        )
 
-        self._apply_detection(detections, self.rabbit_label, wolf_payload, visible_key='rabbit_visible', conf_key='rabbit_confidence', center_key='rabbit_center_x', width_key='rabbit_bbox_width')
-        self._apply_detection(detections, self.carrot_label, wolf_payload, visible_key='carrot_visible', conf_key='carrot_confidence', center_key='carrot_center_x', width_key='carrot_bbox_width')
+        self._apply_detection(
+            detections, self.rabbit_label, wolf_payload,
+            visible_key='rabbit_visible',
+            conf_key='rabbit_confidence',
+            center_key='rabbit_center_x',
+            width_key='rabbit_bbox_width'
+        )
+        self._apply_detection(
+            detections, self.carrot_label, wolf_payload,
+            visible_key='carrot_visible',
+            conf_key='carrot_confidence',
+            center_key='carrot_center_x',
+            width_key='carrot_bbox_width'
+        )
+
+        # 額外補：讓 rabbit_payload 也能直接看 rabbit 偵測結果，方便單獨測試
+        self._apply_detection(
+            detections, self.rabbit_label, rabbit_payload,
+            visible_key='rabbit_visible',
+            conf_key='rabbit_confidence',
+            center_key='rabbit_center_x',
+            width_key='rabbit_bbox_width'
+        )
 
     @staticmethod
-    def _apply_detection(detections: Dict[str, Tuple[float, float, float]], label: str, payload: dict, visible_key: str, conf_key: str, center_key: str, width_key: str) -> None:
+    def _apply_detection(
+        detections: Dict[str, Tuple[float, float, float]],
+        label: str,
+        payload: dict,
+        visible_key: str,
+        conf_key: str,
+        center_key: str,
+        width_key: str
+    ) -> None:
         hit = detections.get(label)
         if hit is None:
             return
