@@ -27,6 +27,7 @@ setup(
             'rabbit_fsm = wolf_rabbit_game.rabbit_fsm:main',
             'wolf_fsm = wolf_rabbit_game.wolf_fsm:main',
             'referee_node = wolf_rabbit_game.referee_node:main',
+            'wolf_tuner = wolf_rabbit_game.wolf_tuner:main',
         ],
     },
 )
