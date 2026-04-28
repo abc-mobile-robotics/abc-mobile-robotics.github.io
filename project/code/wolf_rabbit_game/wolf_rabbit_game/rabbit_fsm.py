@@ -13,92 +13,97 @@ class RabbitFSM(Node):
     def __init__(self) -> None:
         super().__init__('rabbit_fsm')
 
-        self.declare_parameter('vision_topic', '/rabbit/vision')
-        self.declare_parameter('carrot_state_topic', '/game/carrot_state')
-        self.declare_parameter('geofence_topic', '/rabbit/geofence')
-        self.declare_parameter('game_state_topic', '/game/state')
-        self.declare_parameter('odom_topic', '/odom')
-        self.declare_parameter('cmd_vel_topic', '/cmd_vel')
-
-        self.declare_parameter('search_linear_speed', 0.12)
-        self.declare_parameter('search_spin_speed', 0.25)
-        self.declare_parameter('turn_angular_speed', 0.9)
-        self.declare_parameter('flee_linear_speed', 0.22)
-        self.declare_parameter('boundary_turn_speed', 0.8)
-        self.declare_parameter('center_x_px', 320.0)
-        self.declare_parameter('carrot_reach_stop_distance', 0.20)
-        self.declare_parameter('carrot_heading_gain', 1.2)
-        self.declare_parameter('wolf_avoid_gain', 0.004)
-        self.declare_parameter('vision_timeout_sec', 0.7)
-        self.declare_parameter('escape_turn_angle_deg', 180.0)
-        self.declare_parameter('escape_turn_tolerance_deg', 7.0)
-        self.declare_parameter('escape_settle_time_sec', 0.4)
-        self.declare_parameter('max_angular_speed', 1.2)
-        self.declare_parameter('control_period_sec', 0.1)
-
-        self.vision_topic = str(self.get_parameter('vision_topic').value)
-        self.carrot_state_topic = str(self.get_parameter('carrot_state_topic').value)
-        self.geofence_topic = str(self.get_parameter('geofence_topic').value)
-        self.game_state_topic = str(self.get_parameter('game_state_topic').value)
-        self.odom_topic = str(self.get_parameter('odom_topic').value)
-        self.cmd_vel_topic = str(self.get_parameter('cmd_vel_topic').value)
-
-        self.search_linear_speed = float(self.get_parameter('search_linear_speed').value)
-        self.search_spin_speed = float(self.get_parameter('search_spin_speed').value)
-        self.turn_angular_speed = float(self.get_parameter('turn_angular_speed').value)
-        self.flee_linear_speed = float(self.get_parameter('flee_linear_speed').value)
-        self.boundary_turn_speed = float(self.get_parameter('boundary_turn_speed').value)
-        self.center_x_px = float(self.get_parameter('center_x_px').value)
-        self.carrot_reach_stop_distance = float(self.get_parameter('carrot_reach_stop_distance').value)
-        self.carrot_heading_gain = float(self.get_parameter('carrot_heading_gain').value)
-        self.wolf_avoid_gain = float(self.get_parameter('wolf_avoid_gain').value)
-        self.vision_timeout_sec = float(self.get_parameter('vision_timeout_sec').value)
-        self.escape_turn_angle = float(self.get_parameter('escape_turn_angle_deg').value) * 3.141592653589793 / 180.0
-        self.escape_turn_tolerance = float(self.get_parameter('escape_turn_tolerance_deg').value) * 3.141592653589793 / 180.0
-        self.escape_settle_time_sec = float(self.get_parameter('escape_settle_time_sec').value)
-        self.max_angular_speed = float(self.get_parameter('max_angular_speed').value)
-        self.control_period_sec = float(self.get_parameter('control_period_sec').value)
-
-        self.cmd_pub = self.create_publisher(Twist, self.cmd_vel_topic, 10)
-        self.create_subscription(String, self.vision_topic, self.vision_callback, 10)
-        self.create_subscription(String, self.carrot_state_topic, self.carrot_callback, 10)
-        self.create_subscription(String, self.geofence_topic, self.geofence_callback, 10)
-        self.create_subscription(String, self.game_state_topic, self.game_state_callback, 10)
-        self.create_subscription(Odometry, self.odom_topic, self.odom_callback, 10)
-        self.timer = self.create_timer(self.control_period_sec, self.step)
-
-        self.state = 'SEARCH'
-        self.state_enter_time = self.get_clock().now()
-
-        self.vision = {}
-        self.carrot_state = {}
-        self.geofence = {}
-        self.game_state = {}
-
-        self.rabbit_x: Optional[float] = None
-        self.rabbit_y: Optional[float] = None
-        self.current_yaw: float = 0.0
-        self.have_odom = False
+        # DECLARE PARAMETERS for rabbit energy and state
+        self.rabbit_energy = 100.0
+        self.energy_started = False
         self.turn_target_yaw: Optional[float] = None
 
-    def vision_callback(self, msg: String) -> None:
-        self.vision = string_msg_to_dict(msg)
+        # self.declare_parameter('vision_topic', '/rabbit/vision')
+        # self.declare_parameter('carrot_state_topic', '/game/carrot_state')
+        # self.declare_parameter('geofence_topic', '/rabbit/geofence')
+        # self.declare_parameter('game_state_topic', '/game/state')
+        # self.declare_parameter('odom_topic', '/odom')
+        # self.declare_parameter('cmd_vel_topic', '/cmd_vel')
 
-    def carrot_callback(self, msg: String) -> None:
-        self.carrot_state = string_msg_to_dict(msg)
+        # self.declare_parameter('search_linear_speed', 0.12)
+        # self.declare_parameter('search_spin_speed', 0.25)
+        # self.declare_parameter('turn_angular_speed', 0.9)
+        # self.declare_parameter('flee_linear_speed', 0.22)
+        # self.declare_parameter('boundary_turn_speed', 0.8)
+        # self.declare_parameter('center_x_px', 320.0)
+        # self.declare_parameter('carrot_reach_stop_distance', 0.20)
+        # self.declare_parameter('carrot_heading_gain', 1.2)
+        # self.declare_parameter('wolf_avoid_gain', 0.004)
+        # self.declare_parameter('vision_timeout_sec', 0.7)
+        # self.declare_parameter('escape_turn_angle_deg', 180.0)
+        # self.declare_parameter('escape_turn_tolerance_deg', 7.0)
+        # self.declare_parameter('escape_settle_time_sec', 0.4)
+        # self.declare_parameter('max_angular_speed', 1.2)
+        # self.declare_parameter('control_period_sec', 0.1)
 
-    def geofence_callback(self, msg: String) -> None:
-        self.geofence = string_msg_to_dict(msg)
+        # self.vision_topic = str(self.get_parameter('vision_topic').value)
+        # self.carrot_state_topic = str(self.get_parameter('carrot_state_topic').value)
+        # self.geofence_topic = str(self.get_parameter('geofence_topic').value)
+        # self.game_state_topic = str(self.get_parameter('game_state_topic').value)
+        # self.odom_topic = str(self.get_parameter('odom_topic').value)
+        # self.cmd_vel_topic = str(self.get_parameter('cmd_vel_topic').value)
 
-    def game_state_callback(self, msg: String) -> None:
-        self.game_state = string_msg_to_dict(msg)
+        # self.search_linear_speed = float(self.get_parameter('search_linear_speed').value)
+        # self.search_spin_speed = float(self.get_parameter('search_spin_speed').value)
+        # self.turn_angular_speed = float(self.get_parameter('turn_angular_speed').value)
+        # self.flee_linear_speed = float(self.get_parameter('flee_linear_speed').value)
+        # self.boundary_turn_speed = float(self.get_parameter('boundary_turn_speed').value)
+        # self.center_x_px = float(self.get_parameter('center_x_px').value)
+        # self.carrot_reach_stop_distance = float(self.get_parameter('carrot_reach_stop_distance').value)
+        # self.carrot_heading_gain = float(self.get_parameter('carrot_heading_gain').value)
+        # self.wolf_avoid_gain = float(self.get_parameter('wolf_avoid_gain').value)
+        # self.vision_timeout_sec = float(self.get_parameter('vision_timeout_sec').value)
+        # self.escape_turn_angle = float(self.get_parameter('escape_turn_angle_deg').value) * 3.141592653589793 / 180.0
+        # self.escape_turn_tolerance = float(self.get_parameter('escape_turn_tolerance_deg').value) * 3.141592653589793 / 180.0
+        # self.escape_settle_time_sec = float(self.get_parameter('escape_settle_time_sec').value)
+        # self.max_angular_speed = float(self.get_parameter('max_angular_speed').value)
+        # self.control_period_sec = float(self.get_parameter('control_period_sec').value)
 
-    def odom_callback(self, msg: Odometry) -> None:
-        self.rabbit_x = float(msg.pose.pose.position.x)
-        self.rabbit_y = float(msg.pose.pose.position.y)
-        self.current_yaw = yaw_from_quaternion(msg.pose.pose.orientation)
-        self.have_odom = True
+        # self.cmd_pub = self.create_publisher(Twist, self.cmd_vel_topic, 10)
+        # self.create_subscription(String, self.vision_topic, self.vision_callback, 10)
+        # self.create_subscription(String, self.carrot_state_topic, self.carrot_callback, 10)
+        # self.create_subscription(String, self.geofence_topic, self.geofence_callback, 10)
+        # self.create_subscription(String, self.game_state_topic, self.game_state_callback, 10)
+        # self.create_subscription(Odometry, self.odom_topic, self.odom_callback, 10)
+        # self.timer = self.create_timer(self.control_period_sec, self.step)
 
+        # self.state = 'SEARCH'
+        # self.state_enter_time = self.get_clock().now()
+
+        # self.vision = {}
+        # self.carrot_state = {}
+        # self.geofence = {}
+        # self.game_state = {}
+
+        # self.rabbit_x: Optional[float] = None
+        # self.rabbit_y: Optional[float] = None
+        # self.current_yaw: float = 0.0
+        # self.have_odom = False
+
+    # def vision_callback(self, msg: String) -> None:
+    #     self.vision = string_msg_to_dict(msg)
+
+    # def carrot_callback(self, msg: String) -> None:
+    #     self.carrot_state = string_msg_to_dict(msg)
+
+    # def geofence_callback(self, msg: String) -> None:
+    #     self.geofence = string_msg_to_dict(msg)
+
+    # def game_state_callback(self, msg: String) -> None:
+    #     self.game_state = string_msg_to_dict(msg)
+
+    # def odom_callback(self, msg: Odometry) -> None:
+    #     self.rabbit_x = float(msg.pose.pose.position.x)
+    #     self.rabbit_y = float(msg.pose.pose.position.y)
+    #     self.current_yaw = yaw_from_quaternion(msg.pose.pose.orientation)
+    #     self.have_odom = True
+
+    # RABBIT SEES WOLF -> TURN AWAY -> RUN AWAY -> 
     def enter_state(self, new_state: str) -> None:
         if self.state == new_state:
             return
@@ -111,63 +116,69 @@ class RabbitFSM(Node):
         else:
             self.turn_target_yaw = None
 
+        # Start energy counter when the chase/run starts.
+        if new_state == 'ESCAPE_RUN':
+            self.rabbit_energy = 100.0
+            self.energy_started = True
+            self.get_logger().info('Rabbit energy started at 100')
+
         self.get_logger().info(f'Rabbit state -> {new_state}')
 
-    def seconds_in_state(self) -> float:
-        return (self.get_clock().now() - self.state_enter_time).nanoseconds / 1e9
+    # def seconds_in_state(self) -> float:
+    #     return (self.get_clock().now() - self.state_enter_time).nanoseconds / 1e9
 
-    def publish_cmd(self, linear_x: float = 0.0, angular_z: float = 0.0) -> None:
-        msg = Twist()
-        msg.linear.x = float(linear_x)
-        msg.angular.z = float(angular_z)
-        self.cmd_pub.publish(msg)
+    # def publish_cmd(self, linear_x: float = 0.0, angular_z: float = 0.0) -> None:
+    #     msg = Twist()
+    #     msg.linear.x = float(linear_x)
+    #     msg.angular.z = float(angular_z)
+    #     self.cmd_pub.publish(msg)
 
-    def vision_fresh(self) -> bool:
-        return not is_stale(self.vision.get('stamp'), self.vision_timeout_sec)
+    # def vision_fresh(self) -> bool:
+    #     return not is_stale(self.vision.get('stamp'), self.vision_timeout_sec)
 
-    def wolf_visible(self) -> bool:
-        return self.vision_fresh() and bool(self.vision.get('wolf_visible', False))
+    # def wolf_visible(self) -> bool:
+    #     return self.vision_fresh() and bool(self.vision.get('wolf_visible', False))
 
-    def carrot_active(self) -> bool:
-        return bool(self.carrot_state.get('active', False))
+    # def carrot_active(self) -> bool:
+    #     return bool(self.carrot_state.get('active', False))
 
-    def carrot_position(self) -> tuple[Optional[float], Optional[float]]:
-        return self.carrot_state.get('x', None), self.carrot_state.get('y', None)
+    # def carrot_position(self) -> tuple[Optional[float], Optional[float]]:
+    #     return self.carrot_state.get('x', None), self.carrot_state.get('y', None)
 
-    def distance_to_carrot(self) -> Optional[float]:
-        carrot_x, carrot_y = self.carrot_position()
-        if self.rabbit_x is None or self.rabbit_y is None:
-            return None
-        if carrot_x is None or carrot_y is None:
-            return None
-        dx = float(carrot_x) - self.rabbit_x
-        dy = float(carrot_y) - self.rabbit_y
-        return (dx * dx + dy * dy) ** 0.5
+    # def distance_to_carrot(self) -> Optional[float]:
+    #     carrot_x, carrot_y = self.carrot_position()
+    #     if self.rabbit_x is None or self.rabbit_y is None:
+    #         return None
+    #     if carrot_x is None or carrot_y is None:
+    #         return None
+    #     dx = float(carrot_x) - self.rabbit_x
+    #     dy = float(carrot_y) - self.rabbit_y
+    #     return (dx * dx + dy * dy) ** 0.5
 
-    def boundary_recovery(self) -> bool:
-        outside_global = bool(self.geofence.get('outside_global_arena', False))
-        near_global = bool(self.geofence.get('near_global_boundary', False))
-        if outside_global or near_global:
-            self.publish_cmd(0.0, self.boundary_turn_speed)
-            return True
-        return False
+    # def boundary_recovery(self) -> bool:
+    #     outside_global = bool(self.geofence.get('outside_global_arena', False))
+    #     near_global = bool(self.geofence.get('near_global_boundary', False))
+    #     if outside_global or near_global:
+    #         self.publish_cmd(0.0, self.boundary_turn_speed)
+    #         return True
+    #     return False
 
-    def drive_to_xy(self, target_x: float, target_y: float, speed: Optional[float] = None) -> None:
-        if not self.have_odom or self.rabbit_x is None or self.rabbit_y is None:
-            self.publish_cmd(0.0, 0.0)
-            return
+    # def drive_to_xy(self, target_x: float, target_y: float, speed: Optional[float] = None) -> None:
+    #     if not self.have_odom or self.rabbit_x is None or self.rabbit_y is None:
+    #         self.publish_cmd(0.0, 0.0)
+    #         return
 
-        if speed is None:
-            speed = self.search_linear_speed
+    #     if speed is None:
+    #         speed = self.search_linear_speed
 
-        dx = float(target_x) - self.rabbit_x
-        dy = float(target_y) - self.rabbit_y
-        target_yaw = __import__('math').atan2(dy, dx)
-        yaw_error = wrap_to_pi(target_yaw - self.current_yaw)
+    #     dx = float(target_x) - self.rabbit_x
+    #     dy = float(target_y) - self.rabbit_y
+    #     target_yaw = __import__('math').atan2(dy, dx)
+    #     yaw_error = wrap_to_pi(target_yaw - self.current_yaw)
 
-        omega = clamp(self.carrot_heading_gain * yaw_error, -self.max_angular_speed, self.max_angular_speed)
-        linear = 0.0 if abs(yaw_error) > 0.45 else float(speed)
-        self.publish_cmd(linear, omega)
+    #     omega = clamp(self.carrot_heading_gain * yaw_error, -self.max_angular_speed, self.max_angular_speed)
+    #     linear = 0.0 if abs(yaw_error) > 0.45 else float(speed)
+    #     self.publish_cmd(linear, omega)
 
     def step(self) -> None:
         rabbit_alive = bool(self.game_state.get('rabbit_alive', True))
@@ -182,6 +193,7 @@ class RabbitFSM(Node):
             self.publish_cmd(0.0, 0.0)
             return
 
+        # HANDLE THE ESCAPE START (IF WOLF VISIBLE) -> ALERT
         if self.wolf_visible() and self.state not in ('ESCAPE_TURN', 'ESCAPE_RUN'):
             self.enter_state('ESCAPE_TURN')
 
@@ -243,14 +255,28 @@ class RabbitFSM(Node):
             if self.boundary_recovery():
                 return
 
+            if self.energy_started:
+                self.rabbit_energy -= 10.0 # COUNT ENERGY DRAIN AT 10 TICKS PER CONTROL
+                self.rabbit_energy = max(0.0, self.rabbit_energy)
+
+            if self.rabbit_energy <= 0.0:
+                self.publish_cmd(0.0, 0.0)
+                self.get_logger().info('Rabbit energy reached 0. Rabbit stopped.')
+                return
+
             omega = 0.0
             if self.wolf_visible():
                 wolf_error = float(self.vision.get('wolf_center_x', self.center_x_px)) - self.center_x_px
-                omega = clamp(self.wolf_avoid_gain * wolf_error, -self.max_angular_speed, self.max_angular_speed)
+                omega = clamp(
+                    self.wolf_avoid_gain * wolf_error,
+                    -self.max_angular_speed,
+                    self.max_angular_speed,
+                )
 
             self.publish_cmd(self.flee_linear_speed, omega)
 
             if rabbit_escaped and (not inside_wolf_territory) and self.seconds_in_state() >= self.escape_settle_time_sec:
+                self.energy_started = False
                 self.enter_state('SEARCH')
 
 
