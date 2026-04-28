@@ -33,6 +33,8 @@ class RefereeNode(Node):
         self.wolf_vision = {}
         self.phase = 'ACTIVE'
 
+        # Set up publishers and subscribers
+
         self.pub = self.create_publisher(String, self.game_state_topic, 10)
         self.create_subscription(Odometry, self.rabbit_odom_topic, self.rabbit_odom_callback, 10)
         self.create_subscription(Odometry, self.wolf_odom_topic, self.wolf_odom_callback, 10)
