@@ -151,6 +151,9 @@ class RabbitFSM(Node):
         self.state_enter_time = now
         self._last_step_time = now
         self._last_energy_log_time = now
+        # rclpy Jazzy RcutilsLogger does not provide warn_throttle/info_throttle.
+        # Keep our own throttle timestamps for compatible periodic logs.
+        self._throttle_log_last = {}
 
         self.vision = {}
         self.geofence = {}
@@ -297,6 +300,27 @@ class RabbitFSM(Node):
         msg.linear.x = float(linear_x)
         msg.angular.z = float(angular_z)
         self.cmd_pub.publish(msg)
+
+    def _log_throttle(self, level: str, key: str, period_sec: float, text: str) -> None:
+        """Logger throttle compatible with ROS2 Jazzy RcutilsLogger.
+
+        Some ROS2 Python loggers do not have warn_throttle()/info_throttle(),
+        so this helper prevents repeated messages without depending on those APIs.
+        """
+        now_s = self.get_clock().now().nanoseconds / 1e9
+        last_s = self._throttle_log_last.get(key, -1.0e18)
+        if now_s - last_s < max(0.0, period_sec):
+            return
+        self._throttle_log_last[key] = now_s
+        logger = self.get_logger()
+        if level == 'warn':
+            logger.warn(text)
+        elif level == 'error':
+            logger.error(text)
+        elif level == 'debug':
+            logger.debug(text)
+        else:
+            logger.info(text)
 
     def _enter_wander_sub(self, sub: str, duration: float = 0.0) -> None:
         self._wander_sub = sub
@@ -477,7 +501,7 @@ class RabbitFSM(Node):
         """When wolf is visible, go back to the safe zone instead of chasing."""
         if not self.home_ready or not self._pose_ready():
             self.publish_cmd(0.0, 0.0)
-            self.get_logger().warn_throttle(2.0, '[RETURN_HOME] Waiting for odom/home position')
+            self._log_throttle('warn', 'return_wait_odom_home', 2.0, '[RETURN_HOME] Waiting for odom/home position')
             return
 
         dist = self.distance_to_home()
