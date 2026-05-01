@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import math
 import random
@@ -93,12 +93,8 @@ class RabbitFSM(Node):
         self.declare_parameter('scan_topic', '/scan')
 
         # ── safe zone / home behavior ────────────────────────────────────────
-        # By default the first odometry pose is treated as the safe-zone center.
-        # If you want a fixed map coordinate, set home_from_first_odom:=False
-        # and pass home_x/home_y from launch.
-        self.declare_parameter('home_from_first_odom', True)
-        self.declare_parameter('home_x', 0.0)
-        self.declare_parameter('home_y', 0.0)
+        # Home is NOT read from a topic or fixed launch coordinate.
+        # The first odometry pose after this node starts is locked as the safe zone center.
         self.declare_parameter('safe_radius', 0.45)
         self.declare_parameter('wander_radius', 1.30)
         self.declare_parameter('return_arrival_radius', 0.25)
@@ -151,6 +147,9 @@ class RabbitFSM(Node):
         self.state_enter_time = now
         self._last_step_time = now
         self._last_energy_log_time = now
+        # rclpy Jazzy RcutilsLogger does not provide warn_throttle/info_throttle.
+        # Keep our own throttle timestamps for compatible periodic logs.
+        self._throttle_log_last = {}
 
         self.vision = {}
         self.geofence = {}
@@ -162,9 +161,11 @@ class RabbitFSM(Node):
         self.current_yaw = 0.0
         self.have_odom = False
 
-        self.home_x = self.home_x_param
-        self.home_y = self.home_y_param
-        self.home_ready = not self.home_from_first_odom
+        # Home/safe-zone center is locked once from the first odometry message.
+        # None means no odom has arrived yet.
+        self.home_x: Optional[float] = None
+        self.home_y: Optional[float] = None
+        self.home_ready = False
 
         self.energy = clamp(self.initial_energy, 0.0, self.max_energy)
 
@@ -183,7 +184,7 @@ class RabbitFSM(Node):
 
         self.get_logger().info(
             f'RabbitFSM started. vision={self.vision_topic}, odom={self.odom_topic}, '
-            f'cmd_vel={self.cmd_vel_topic}, home_from_first_odom={self.home_from_first_odom}'
+            f'cmd_vel={self.cmd_vel_topic}, home=start position from first odom'
         )
 
     # ── parameter loading ─────────────────────────────────────────────────────
@@ -197,9 +198,6 @@ class RabbitFSM(Node):
         self.cmd_vel_topic = str(g('cmd_vel_topic').value)
         self.scan_topic = str(g('scan_topic').value)
 
-        self.home_from_first_odom = bool(g('home_from_first_odom').value)
-        self.home_x_param = float(g('home_x').value)
-        self.home_y_param = float(g('home_y').value)
         self.safe_radius = float(g('safe_radius').value)
         self.wander_radius = float(g('wander_radius').value)
         self.return_arrival_radius = float(g('return_arrival_radius').value)
@@ -255,12 +253,14 @@ class RabbitFSM(Node):
         self.current_yaw = yaw_from_quaternion(msg.pose.pose.orientation)
         self.have_odom = True
 
-        if self.home_from_first_odom and not self.home_ready:
+        # Lock the starting pose exactly once as the rabbit's home/safe point.
+        # This avoids depending on any external home-point topic.
+        if not self.home_ready:
             self.home_x = self.rabbit_x
             self.home_y = self.rabbit_y
             self.home_ready = True
             self.get_logger().info(
-                f'Safe zone locked from first odom: home=({self.home_x:.2f}, {self.home_y:.2f})'
+                f'Safe zone locked from starting odom: home=({self.home_x:.2f}, {self.home_y:.2f})'
             )
 
     def scan_callback(self, msg: LaserScan) -> None:
@@ -298,6 +298,27 @@ class RabbitFSM(Node):
         msg.angular.z = float(angular_z)
         self.cmd_pub.publish(msg)
 
+    def _log_throttle(self, level: str, key: str, period_sec: float, text: str) -> None:
+        """Logger throttle compatible with ROS2 Jazzy RcutilsLogger.
+
+        Some ROS2 Python loggers do not have warn_throttle()/info_throttle(),
+        so this helper prevents repeated messages without depending on those APIs.
+        """
+        now_s = self.get_clock().now().nanoseconds / 1e9
+        last_s = self._throttle_log_last.get(key, -1.0e18)
+        if now_s - last_s < max(0.0, period_sec):
+            return
+        self._throttle_log_last[key] = now_s
+        logger = self.get_logger()
+        if level == 'warn':
+            logger.warn(text)
+        elif level == 'error':
+            logger.error(text)
+        elif level == 'debug':
+            logger.debug(text)
+        else:
+            logger.info(text)
+
     def _enter_wander_sub(self, sub: str, duration: float = 0.0) -> None:
         self._wander_sub = sub
         self._wander_sub_start = self.get_clock().now().nanoseconds / 1e9
@@ -317,10 +338,10 @@ class RabbitFSM(Node):
         return self.have_odom and self.rabbit_x is not None and self.rabbit_y is not None
 
     def distance_to_home(self) -> Optional[float]:
-        if not self.home_ready or not self._pose_ready():
+        if not self.home_ready or self.home_x is None or self.home_y is None or not self._pose_ready():
             return None
-        dx = self.home_x - float(self.rabbit_x)
-        dy = self.home_y - float(self.rabbit_y)
+        dx = float(self.home_x) - float(self.rabbit_x)
+        dy = float(self.home_y) - float(self.rabbit_y)
         return math.hypot(dx, dy)
 
     def in_safe_zone(self) -> bool:
@@ -399,7 +420,7 @@ class RabbitFSM(Node):
 
         # If the arena boundary is hit, bias motion back to home.
         if self.home_ready and self._pose_ready():
-            self.drive_to_xy(self.home_x, self.home_y, self.wander_linear_speed)
+            self.drive_to_xy(float(self.home_x), float(self.home_y), self.wander_linear_speed)
         else:
             self.publish_cmd(0.0, self.wander_turn_speed)
         return True
@@ -416,7 +437,7 @@ class RabbitFSM(Node):
         dist = self.distance_to_home()
         if dist is not None and dist > self.wander_radius:
             self.get_logger().debug(f'[WANDER] Outside wander radius ({dist:.2f}m), returning closer to home')
-            self.drive_to_xy(self.home_x, self.home_y, self.wander_linear_speed)
+            self.drive_to_xy(float(self.home_x), float(self.home_y), self.wander_linear_speed)
             return
 
         if self._wander_sub == _W_TURNING:
@@ -477,7 +498,7 @@ class RabbitFSM(Node):
         """When wolf is visible, go back to the safe zone instead of chasing."""
         if not self.home_ready or not self._pose_ready():
             self.publish_cmd(0.0, 0.0)
-            self.get_logger().warn_throttle(2.0, '[RETURN_HOME] Waiting for odom/home position')
+            self._log_throttle('warn', 'return_wait_odom_home', 2.0, '[RETURN_HOME] Waiting for odom/home position')
             return
 
         dist = self.distance_to_home()
@@ -493,7 +514,7 @@ class RabbitFSM(Node):
             self.publish_cmd(0.0, self.obstacle_turn_angular)
             return
 
-        self.drive_to_xy(self.home_x, self.home_y, self.return_home_speed)
+        self.drive_to_xy(float(self.home_x), float(self.home_y), self.return_home_speed)
 
     def rest_step(self, dt: float) -> None:
         self.publish_cmd(0.0, 0.0)
